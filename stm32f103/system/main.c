@@ -75,86 +75,21 @@ void print_chipid()
 					 __REV(readl(0X1FFFF7E8)), __REV(readl(0X1FFFF7EC)), __REV(readl(0X1FFFF7F0)));
 }
 
-uint32_t g_flag = 0xf00dbeef;
-
-uint32_t get_sysconfig()
-{
-	static uint32_t init = 0;
-	uint32_t config;
- /* micro usb线说明： 
-		GND-黑色 : GND
-		VBUS-红色: VCC 3.3
-		DM-白色  : GPIOA.5
-		DP-绿色  : GPIOA.6
- */
-	if (init == 0) {
-		gpio_init(GROUPA, 5, GPIO_Mode_Out_PP);	/* SPI SCK  */
-		gpio_init(GROUPA, 6, GPIO_Mode_Out_PP); /* SPI MISO */
-		gpio_init(GROUPA, 7, GPIO_Mode_Out_PP);/*  SPI MOSI */	
-		init = 1;
-	}
-
-/*	
-	gpio_write(GROUPA, 5, 1);
-	gpio_write(GROUPA, 6, 0);
-	gpio_write(GROUPA, 7, 1);
-*/
-	config = gpio_read(GROUPA, 6) << 1 | gpio_read(GROUPA, 5);
-	return config;
-}
-
-/*
-memory config:
-utos 
-56K flash 	[0x08000000, 0x0800e000]
-16K sram		[0x20000000, 0x20004000]
-
-badusb
-8K   flash 	[0x0800e000, 0x08010000]
-(4 flash pages)
-
-4K   sram 	[0x20004000, 0x20005000]
-
-*/
-/* we treat utos as the main system */
-void enter_subsystem()
-{
-	uint32_t config;
-	char cmd[] = { "boot 0x0800E000" };
-	config = get_sysconfig();
-	PRINT_EMG("system config: %d\n", config);
-	switch(config) {
-		case (0):
-			break;
-		case (1):
-			break;
-		case (2):
-			break;
-		case (3):
-				PRINT_EMG("booting the badusb system...\n");
-				shell(cmd); /* boot the badusb system */
-		default:
-			break;
-	}
-
-}
-
 /*
  * main: initialize and start the system
  */
 int main (void)
 {
 	__local_irq_enable();
-	uart_init();
-	enter_subsystem();
+	uart_init();	
 	timer_init();
 	SysTick_Init();
 
-#define CONFIG_USB
+//#define CONFIG_USB
 
 #ifdef CONFIG_USB
 	USB_Config();
-	io_type |= IO_USB;	/* FIXME: fix the concurrent problem, such as argc, argv. no need to fix, the another io is just display */
+	io_type |= IO_USB;
 #endif
 	
 	/* 发送一个字符串 */
@@ -191,31 +126,17 @@ int main (void)
 	DUMP_VAR4(bss_image_base);
 	DUMP_VAR4(bss_image_size);
 	
-#if 0
- /* micro usb线说明： 
-		GND-黑色 : GND
-		VBUS-红色: VCC 3.3
-		DM-白色  : GPIOA.5
-		DP-绿色  : GPIOA.6
- */
-	gpio_init(GROUPA, 5, GPIO_Mode_Out_PP);	/* SPI SCK  */
-	gpio_init(GROUPA, 6, GPIO_Mode_Out_PP); /* SPI MISO */
-	gpio_init(GROUPA, 7, GPIO_Mode_Out_PP);/*  SPI MOSI */
-	
-	gpio_write(GROUPA, 5, 1);
-	gpio_write(GROUPA, 6, 0);
-	gpio_write(GROUPA, 7, 1);
-#endif
-
-
-#if 0	
-	while(1) {
-		gpio_write(GROUPB, 1, 0);
-		mdelay(1000);
-		gpio_write(GROUPB, 1, 1);
-		mdelay(1000);
+	NRF24L01_Init();
+	while(NRF24L01_Check())
+	{
+		PRINT_EMG("nrf24l01 probe err\r\n");
+		mdelay(500);
 	}
-#endif
+	PRINT_EMG("nrf24l01 probe ok\r\n");
+
+	nrf24l01_ble_broadcast();
+	
+	while(1);
 	
 	{
 		
@@ -245,17 +166,6 @@ int main (void)
 #endif
 				}				
 #endif	/* CONFIG_USB */
-
-				if (g_flag == 0xf11dbeef) {
-					extern void dht11_main();
-					extern void hcsr04_main();
-					extern void ds18b20_main();
-					extern void bmp180_main();
-					dht11_main();
-					hcsr04_main();
-					ds18b20_main();
-					bmp180_main();
-				}
 		}	
 	}
 }
