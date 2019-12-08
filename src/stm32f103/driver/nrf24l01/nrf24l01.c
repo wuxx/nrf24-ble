@@ -282,9 +282,9 @@ void nrf24l01_ble_broadcast()
 				  
 			  buf[L++] = 4;   // length of custom data, including type byte
 			  buf[L++] = 0xff;	 
-			  buf[L++] = 0xCC;
-			  buf[L++] = 0xBB;	
-			  buf[L++] = 0xDD;// some test data
+			  buf[L++] = 0x11;
+			  buf[L++] = 0x22;	
+			  buf[L++] = 0x33;// some test data
 				  
 			  buf[L++] = 0x55;	//CRC start value: 0x555555
 			  buf[L++] = 0x55;
@@ -303,12 +303,9 @@ void nrf24l01_ble_broadcast()
 			  nrf24l01_tx(buf);
 			  mdelay(2);
 		  }
-		
+
 		  mdelay(200);	 // Broadcasting interval
 
 	}
 }
-
-
-
 
