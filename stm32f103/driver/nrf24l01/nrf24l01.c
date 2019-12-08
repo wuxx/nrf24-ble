@@ -7,7 +7,7 @@ u8 RX_ADDRESS[RX_ADR_WIDTH]={0x6d,0x75,0x73,0x65,0x0a};
 #define TX_CHANNEL_NUM  (100)
 #define RX_CHANNEL_NUM  (120)
 
-void NRF24L01_Init(void)
+void nrf24l01_init(void)
 {  
 	GPIO_InitTypeDef GPIO_InitStructure;
 	SPI_InitTypeDef  SPI_InitStructure; 
@@ -44,19 +44,19 @@ void NRF24L01_Init(void)
 	NRF24L01_CSN=1;
 }
 
-u8 NRF24L01_Check(void)
+u8 nrf24l01_check(void)
 {
 	u8 buf[5]={0XA5,0XA5,0XA5,0XA5,0XA5};
 	u8 i;
 	SPI1_SetSpeed(SPI_BaudRatePrescaler_8);
-	NRF24L01_Write_Buf(NRF_WRITE_REG+TX_ADDR,buf,5);
-	NRF24L01_Read_Buf(TX_ADDR,buf,5);
+	nrf24l01_write_buf(NRF_WRITE_REG+TX_ADDR,buf,5);
+	nrf24l01_read_buf(TX_ADDR,buf,5);
 	for(i=0;i<5;i++)if(buf[i]!=0XA5)break;	 							   
 	if(i!=5)return 1;
 	return 0;
 }	 	 
 
-u8 NRF24L01_Write_Reg(u8 reg,u8 value)
+u8 nrf24l01_write_reg(u8 reg,u8 value)
 {
 		u8 status;	
    	NRF24L01_CSN=0;
@@ -66,7 +66,7 @@ u8 NRF24L01_Write_Reg(u8 reg,u8 value)
   	return(status);
 }
 
-u8 NRF24L01_Read_Reg(u8 reg)
+u8 nrf24l01_read_reg(u8 reg)
 {
 		u8 reg_val;	    
 		NRF24L01_CSN = 0;
@@ -76,7 +76,7 @@ u8 NRF24L01_Read_Reg(u8 reg)
   	return(reg_val);
 }	
 
-u8 NRF24L01_Read_Buf(u8 reg,u8 *pBuf,u8 len)
+u8 nrf24l01_read_buf(u8 reg,u8 *pBuf,u8 len)
 {
 		u8 status,u8_ctr;	       
   	NRF24L01_CSN = 0;
@@ -86,7 +86,7 @@ u8 NRF24L01_Read_Buf(u8 reg,u8 *pBuf,u8 len)
   	return status;
 }
 
-u8 NRF24L01_Write_Buf(u8 reg, u8 *pBuf, u8 len)
+u8 nrf24l01_write_buf(u8 reg, u8 *pBuf, u8 len)
 {
 		u8 status,u8_ctr;	    
 		NRF24L01_CSN = 0;
@@ -96,19 +96,19 @@ u8 NRF24L01_Write_Buf(u8 reg, u8 *pBuf, u8 len)
   	return status;
 }				   
 
-u8 NRF24L01_TxPacket(u8 *txbuf)
+u8 nrf24l01_tx(u8 *txbuf)
 {
 	u8 sta;
  	SPI1_SetSpeed(SPI_BaudRatePrescaler_8);
 	NRF24L01_CE=0;
-  	NRF24L01_Write_Buf(WR_TX_PLOAD,txbuf,TX_PLOAD_WIDTH);
+  	nrf24l01_write_buf(WR_TX_PLOAD,txbuf,TX_PLOAD_WIDTH);
  	NRF24L01_CE=1;
 	while(NRF24L01_IRQ!=0);
-	sta=NRF24L01_Read_Reg(STATUS);
-	NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS,sta);
+	sta=nrf24l01_read_reg(STATUS);
+	nrf24l01_write_reg(NRF_WRITE_REG+STATUS,sta);
 	if(sta&MAX_TX)
 	{
-		NRF24L01_Write_Reg(FLUSH_TX,0xff);
+		nrf24l01_write_reg(FLUSH_TX,0xff);
 		return MAX_TX; 
 	}
 	if(sta&TX_OK)
@@ -118,53 +118,20 @@ u8 NRF24L01_TxPacket(u8 *txbuf)
 	return 0xff;
 }
 
-u8 NRF24L01_RxPacket(u8 *rxbuf)
+u8 nrf24l01_RxPacket(u8 *rxbuf)
 {
 	u8 sta;		    							   
 	SPI1_SetSpeed(SPI_BaudRatePrescaler_8);
-	sta=NRF24L01_Read_Reg(STATUS);
-	NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS,sta);
+	sta=nrf24l01_read_reg(STATUS);
+	nrf24l01_write_reg(NRF_WRITE_REG+STATUS,sta);
 	if(sta&RX_OK)
 	{
-		NRF24L01_Read_Buf(RD_RX_PLOAD,rxbuf,RX_PLOAD_WIDTH);
-		NRF24L01_Write_Reg(FLUSH_RX,0xff);
+		nrf24l01_read_buf(RD_RX_PLOAD,rxbuf,RX_PLOAD_WIDTH);
+		nrf24l01_write_reg(FLUSH_RX,0xff);
 		return 0; 
 	}	   
 	return 1;
-}					    
-
-void NRF24L01_RX_Mode(void)
-{
-		NRF24L01_CE=0;
-  	NRF24L01_Write_Buf(NRF_WRITE_REG+RX_ADDR_P0,(u8*)RX_ADDRESS,RX_ADR_WIDTH);
-	  
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_AA,0x01);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_RXADDR,0x01);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_CH,RX_CHANNEL_NUM);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+RX_PW_P0,RX_PLOAD_WIDTH);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_SETUP,0x0f);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+CONFIG, 0x0f);
-  	NRF24L01_CE = 1;
-  	udelay(150);
 }
-
-void NRF24L01_TX_Mode(void)
-{														 
-		NRF24L01_CE=0;	    
-  	NRF24L01_Write_Buf(NRF_WRITE_REG+TX_ADDR,(u8*)TX_ADDRESS,TX_ADR_WIDTH);
-  	NRF24L01_Write_Buf(NRF_WRITE_REG+RX_ADDR_P0,(u8*)RX_ADDRESS,RX_ADR_WIDTH);
-
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_AA,0x01);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_RXADDR,0x01);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+SETUP_RETR,0x1f);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_CH,TX_CHANNEL_NUM);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_SETUP,0x0f);
-  	NRF24L01_Write_Reg(NRF_WRITE_REG+CONFIG,0x0e);
-		NRF24L01_CE=1;
-		udelay(150);
-}
-
-
 
 /*************** BLE ***************/
 
@@ -252,38 +219,38 @@ void btLePacketEncode(uint8_t* packet, uint8_t len, uint8_t chan){
 
 void nrf24l01_ble_broadcast()
 {
-	NRF24L01_Write_Reg(NRF_WRITE_REG+CONFIG,0x12);
+	nrf24l01_write_reg(NRF_WRITE_REG+CONFIG,0x12);
 	
-	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_AA,0x00); /* no ack */
+	nrf24l01_write_reg(NRF_WRITE_REG+EN_AA,0x00); /* no ack */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_RXADDR,0x00); /* no rx */
+	nrf24l01_write_reg(NRF_WRITE_REG+EN_RXADDR,0x00); /* no rx */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+SETUP_AW,0x02); /* 4-byte addr */
+	nrf24l01_write_reg(NRF_WRITE_REG+SETUP_AW,0x02); /* 4-byte addr */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+SETUP_RETR,0x00); /* no auto-retransmit */
+	nrf24l01_write_reg(NRF_WRITE_REG+SETUP_RETR,0x00); /* no auto-retransmit */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+RF_SETUP,0x06); /* 1Mbps at 0dbm */
+	nrf24l01_write_reg(NRF_WRITE_REG+RF_SETUP,0x06); /* 1Mbps at 0dbm */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS,0x3e); /* clear flags */
+	nrf24l01_write_reg(NRF_WRITE_REG+STATUS,0x3e); /* clear flags */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+0x1C,0x00); /* no dynamic payloads */
+	nrf24l01_write_reg(NRF_WRITE_REG+0x1C,0x00); /* no dynamic payloads */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+0x1D,0x00); /* no features */
+	nrf24l01_write_reg(NRF_WRITE_REG+0x1D,0x00); /* no features */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+0x1D,0x00); /* no features */
+	nrf24l01_write_reg(NRF_WRITE_REG+0x1D,0x00); /* no features */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+0x11,32); /* always rx 32 bytes */
+	nrf24l01_write_reg(NRF_WRITE_REG+0x11,32); /* always rx 32 bytes */
 
-	NRF24L01_Write_Reg(NRF_WRITE_REG+EN_RXADDR, 0x01); /* rx on pipe 0 */
+	nrf24l01_write_reg(NRF_WRITE_REG+EN_RXADDR, 0x01); /* rx on pipe 0 */
 
-	TX_ADDRESS[0] = swapbits(0x8E);
+  TX_ADDRESS[0] = swapbits(0x8E);
   TX_ADDRESS[1] = swapbits(0x89);
   TX_ADDRESS[2] = swapbits(0xBE);
   TX_ADDRESS[3] = swapbits(0xD6);
 	
-	NRF24L01_Write_Buf(NRF_WRITE_REG+TX_ADDR,(uint8_t*)TX_ADDRESS, 4);//写TX节点地址 
+	nrf24l01_write_buf(NRF_WRITE_REG+TX_ADDR,(uint8_t*)TX_ADDRESS, 4);//写TX节点地址 
 
-	NRF24L01_Write_Buf(NRF_WRITE_REG+RX_ADDR_P0,(uint8_t*)TX_ADDRESS, 4);//写TX节点地址 
+	nrf24l01_write_buf(NRF_WRITE_REG+RX_ADDR_P0,(uint8_t*)TX_ADDRESS, 4);//写TX节点地址 
 
 
 	while (1) {
@@ -315,25 +282,25 @@ void nrf24l01_ble_broadcast()
 				  
 			  buf[L++] = 4;   // length of custom data, including type byte
 			  buf[L++] = 0xff;	 
-			  buf[L++] = 0xAA;
+			  buf[L++] = 0xCC;
 			  buf[L++] = 0xBB;	
-			  buf[L++] = 0xCD;// some test data
+			  buf[L++] = 0xDD;// some test data
 				  
 			  buf[L++] = 0x55;	//CRC start value: 0x555555
 			  buf[L++] = 0x55;
 			  buf[L++] = 0x55;
 		
-			  NRF24L01_Write_Reg(NRF_WRITE_REG+RF_CH, chRf[ch]);
+			  nrf24l01_write_reg(NRF_WRITE_REG+RF_CH, chRf[ch]);
 			  
-			  NRF24L01_Write_Reg(NRF_WRITE_REG+STATUS, 0x6E); // clear flags
+			  nrf24l01_write_reg(NRF_WRITE_REG+STATUS, 0x6E); // clear flags
 			  	
 				  
 			  btLePacketEncode(buf, L, chLe[ch]);
 			  
-			  NRF24L01_Write_Reg(FLUSH_TX,0xff); //Clear TX Fifo
-			  NRF24L01_Write_Reg(FLUSH_RX,0xff); //Clear RX Fifo		
+			  nrf24l01_write_reg(FLUSH_TX,0xff); //Clear TX Fifo
+			  nrf24l01_write_reg(FLUSH_RX,0xff); //Clear RX Fifo		
 
-			  NRF24L01_TxPacket(buf);
+			  nrf24l01_tx(buf);
 			  mdelay(2);
 		  }
 		

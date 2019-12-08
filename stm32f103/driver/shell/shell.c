@@ -326,8 +326,8 @@ static int32_t cmd_gpio()
 static int32_t cmd_nrf24()
 {
 	if (strcmp(argv[1], "init") == 0) {
-		NRF24L01_Init();
-		while(NRF24L01_Check())
+		nrf24l01_init();
+		while(nrf24l01_check())
 		{
 			PRINT_EMG("nrf24l01 probe err\r\n");
 			mdelay(500);
